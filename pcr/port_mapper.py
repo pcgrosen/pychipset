@@ -76,8 +76,7 @@ class RegisterTester:
         values = (self.pre_value, self.zero_phase.result,
                   self.one_phase.result, self.reset_phase.result)
 
-        return not all(v == 0xffffffff for v in values) \
-           and not all(v == 0x00000000 for v in values)
+        return not all(v == 0xffffffff for v in values)
 
     def classify_bit(self, bit_index):
         def get_bit(field):
