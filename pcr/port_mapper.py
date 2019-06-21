@@ -34,13 +34,13 @@ l = logging.getLogger(__name__)
 
 class RegisterTester:
     class BitClassification(enum.Enum):
-        READ_WRITE    = enum.auto()
-        CONSTANT_ZERO = enum.auto()
-        CONSTANT_ONE  = enum.auto()
-        LOCK_ON_ZERO  = enum.auto()
-        LOCK_ON_ONE   = enum.auto()
-        NOT_TESTED    = enum.auto()
-        UNKNOWN       = enum.auto()
+        READ_WRITE    = "RW"
+        CONSTANT_ZERO = "0"
+        CONSTANT_ONE  = "1"
+        LOCK_ON_ZERO  = "L0"
+        LOCK_ON_ONE   = "L1"
+        NOT_TESTED    = "NT"
+        UNKNOWN       = "UK"
 
     PhaseRecord = namedtuple("PhaseRecord", ("attempted_write", "result"))
     def __init__(self, reg):
@@ -108,7 +108,23 @@ class RegisterTester:
         return self.BitClassification.UNKNOWN
 
     def classify_bits(self):
-        return {i: self.classify_bit(i) for i in range(REGISTER_SIZE * 8)}
+        return [self.classify_bit(i) for i in range(REGISTER_SIZE * 8)]
+
+    def pretty(self):
+        header = ["Port %02x" % (self.reg.port),
+                  "at +%04x" % (self.reg.offset)]
+        bits = self.classify_bits()
+        fancy_bits = []
+        for i, b in reversed(list(enumerate(bits))):
+            fancy_bits.append("%02d: %s" % (i, b.value))
+        max_len = max(len(s) for s in header + fancy_bits)
+        def mkline(s):
+            return "| " + s.ljust(max_len) + " |\n"
+        splitter = mkline("-" * max_len)
+        blank = mkline("")
+        return splitter \
+            + blank + "".join(mkline(s) for s in header)     + blank + splitter \
+            + blank + "".join(mkline(s) for s in fancy_bits) + blank + splitter
 
 def map_pcr_port(pcr, port, always_one=None, always_zero=None, no_modify=None):
     if always_one is None:
