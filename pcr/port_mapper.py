@@ -73,10 +73,11 @@ class RegisterTester:
 
     @property
     def appears_implemented(self):
-        return any(v != 0xffffffff for v in (self.pre_value,
-                                             self.zero_phase.result,
-                                             self.one_phase.result,
-                                             self.reset_phase.result))
+        values = (self.pre_value, self.zero_phase.result,
+                  self.one_phase.result, self.reset_phase.result)
+
+        return not all(v == 0xffffffff for v in values) \
+           and not all(v == 0x00000000 for v in values)
 
     def classify_bit(self, bit_index):
         def get_bit(field):
@@ -111,8 +112,10 @@ class RegisterTester:
         return [self.classify_bit(i) for i in range(REGISTER_SIZE * 8)]
 
     def pretty(self):
-        header = ["Port %02x" % (self.reg.port),
-                  "at +%04x" % (self.reg.offset)]
+        header = ["Port %02x" % (self.reg.port,),
+                  "at +%04x" % (self.reg.offset,),
+                  "original:",
+                  "%08x" % (self.pre_value,)]
         bits = self.classify_bits()
         fancy_bits = []
         for i, b in reversed(list(enumerate(bits))):
@@ -158,7 +161,9 @@ def main():
     args = parser.parse_args()
 
     with PCR(args.base) as p:
-        map_pcr_port(p, args.port)
+        res = map_pcr_port(p, args.port)
+        filtered = [reg.pretty() for reg in res.values() if reg.appears_implemented]
+        args.outfile.write("\n".join(filtered) + "\n")
 
 if __name__ == "__main__":
     main()
