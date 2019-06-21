@@ -1,0 +1,34 @@
+HSIO Strap Configuration: 0x89
+General Purpose I/O (GPIO) Community 3: 0xAC
+General Purpose I/O (GPIO) Community 2: 0xAD
+General Purpose I/O (GPIO) Community 1: 0xAE
+General Purpose I/O (GPIO) Community 0: 0xAF
+DCI: 0xB8
+PSF1- Function Disable: 0xBA
+PSF2- Function Disable: 0xBB
+PSF3- Function Disable: 0xBC
+PSF4- Function Disable: 0xBD
+ISH Controller: 0xBF
+Real Time Clock (RTC): 0xC3
+Processor Interface, 8254 Timer, HPET, APIC: 0xC4
+SMBus: 0xC6
+LPC: 0xC7
+USB2.0: 0xCA
+UART, I2C, GSPI Interface: 0xCB
+FIA Configuration: 0xCF
+HDA / DSP: 0xD7
+SATA: 0xD9
+Integrated Clock Controller (ICC): 0xDC
+PCIe Controller #1 (SPA): 0xE0
+PCIe Controller #2 (SPB): 0xE1
+PCIe Controller #3 (SPC): 0xE2
+PCIe Controller #4 (SPD): 0xE3
+PCIe Controller #5 (SPE): 0xE4
+USB Dual Role / OTG: 0xE5
+xHCI: 0xE6
+MODPHY0 (HSIO Lanes #1 - #6): 0xEA
+MODPHY1 (HSIO Lanes #7 - #14): 0xE9
+MODPHY2 (HSIO Lanes #15 - #18): 0xA9
+MODPHY3 (HSIO Lanes 19-26): 0xA8
+eSPI / SPI: 0xEE
+DMI Configuration: 0xEF
