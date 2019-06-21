@@ -112,22 +112,18 @@ class RegisterTester:
         return [self.classify_bit(i) for i in range(REGISTER_SIZE * 8)]
 
     def pretty(self):
-        header = ["Port %02x" % (self.reg.port,),
-                  "at +%04x" % (self.reg.offset,),
-                  "original:",
-                  "%08x" % (self.pre_value,)]
+        header = "Port %02x at +%04x; original: %08x" \
+                 % (self.reg.port, self.reg.offset, self.pre_value)
         bits = self.classify_bits()
         fancy_bits = []
         for i, b in reversed(list(enumerate(bits))):
-            fancy_bits.append("%02d: %s" % (i, b.value))
-        max_len = max(len(s) for s in header + fancy_bits)
-        def mkline(s):
-            return "| " + s.ljust(max_len) + " |\n"
-        splitter = mkline("-" * max_len)
-        blank = mkline("")
-        return splitter \
-            + blank + "".join(mkline(s) for s in header)     + blank + splitter \
-            + blank + "".join(mkline(s) for s in fancy_bits) + blank + splitter
+            fancy_bits.append(("%02d" % (i,), "%s" % (b.value,)))
+        def section(s):
+            return "| " + s.ljust(2) + " "
+        lines = ["".join(section(s) for s in l) + "|\n" for l in zip(*fancy_bits)]
+        splitter = "-" * (len(lines[0]) - 1) + "\n"
+        padded_header = "|" + header.center(len(lines[0]) - 3) + "|" + "\n"
+        return splitter + padded_header + splitter + lines[0] + lines[1] + splitter
 
 def map_pcr_port(pcr, port, always_one=None, always_zero=None, no_modify=None):
     if always_one is None:
