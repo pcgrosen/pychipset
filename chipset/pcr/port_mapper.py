@@ -124,7 +124,9 @@ class RegisterTester:
         padded_header = "|" + header.center(len(lines[0]) - 3) + "|" + "\n"
         return splitter + padded_header + splitter + lines[0] + lines[1] + splitter
 
-def map_pcr_port(pcr, port, always_one=None, always_zero=None, no_modify=None):
+def map_pcr_port(pcr, port, no_map=None, always_one=None, always_zero=None, no_modify=None):
+    if no_map is None:
+        no_map = frozenset()
     if always_one is None:
         always_one = {}
     if always_zero is None:
@@ -134,6 +136,8 @@ def map_pcr_port(pcr, port, always_one=None, always_zero=None, no_modify=None):
     records = {}
     l.info("Mapping PCR port %x", port)
     for off in progressbar.progressbar(range(0, PORT_SIZE, REGISTER_SIZE)):
+        if off in no_map:
+            continue
         reg = Register(pcr, port, off,
                        always_one=always_one.get(off, 0),
                        always_zero=always_zero.get(off, 0),
@@ -152,11 +156,13 @@ def main():
                         help="Output file for the map.")
     parser.add_argument("--base", type=lambda x: int(x, 16), default=0xfd000000,
                         help="Base address of PCR region.")
+    parser.add_argument("--no-map", type=lambda x: int(x, 16), action="append",
+                        help="Do not map a register at a particular offset.")
 
     args = parser.parse_args()
 
     with PCR(args.base) as p:
-        res = map_pcr_port(p, args.port)
+        res = map_pcr_port(p, args.port, no_map=frozenset(args.no_map))
         filtered = [reg.pretty() for reg in res.values() if reg.appears_implemented]
         args.outfile.write("\n".join(filtered) + "\n")
 

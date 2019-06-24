@@ -2,13 +2,13 @@ from setuptools import setup
 
 
 setup(
-    name="pypcr",
+    name="pychipset",
     version="0.1",
-    packages=["pcr"],
+    packages=["chipset"],
     install_requires=["progressbar2"],
     entry_points={
         "console_scripts": [
-            "pcrportmap = pcr.port_mapper:main"
+            "pcrportmap = chipset.pcr.port_mapper:main"
         ]
     }
 )
