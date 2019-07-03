@@ -1,4 +1,8 @@
+import re
+import struct
+import argparse
 from ._libpci import lib, ffi
+
 
 constants = lib
 PCI_ADDR_SIZE = ffi.sizeof(ffi.cast("pciaddr_t", 0))
@@ -249,3 +253,107 @@ class Device:
     def write_block(self, pos, data):
         data = bytes(data)
         return lib.pci_write_block(self.raw_dev, pos, data, len(data)) > 0
+
+
+def main():
+    def parse_address(addr):
+        pat = r"([0-9a-fA-F]{1,2}):([0-9a-fA-F]{1,2}):([0-9a-fA-F])\+([0-9a-fA-F]{1,4})"
+        res = re.fullmatch(pat, addr)
+        if res is None:
+            raise ValueError("Couldn't parse %r as a PCI address" % (addr,))
+        return tuple(map(lambda x: int(x, 16), res.group(1, 2, 3, 4)))
+
+    def format_addr(bus, device, func, offset):
+        return "%02x:%02x:%01x+%04x" % (bus, device, func, offset)
+
+    def unpack(thing):
+        m = {8: "Q", 4: "I", 2: "H", 1: "B"}
+        if len(thing) not in m:
+            raise ValueError("Can't process block of length %d" % (len(thing),))
+        return struct.unpack("<" + m[len(thing)], thing)[0]
+
+    def pack(thing, length):
+        m = {8: "Q", 4: "I", 2: "H", 1: "B"}
+        if length not in m:
+            raise ValueError("Can't process block of length %d" % (length,))
+        return struct.pack("<" + m[length], thing)
+
+    def read(args):
+        fmt = "%s : %0" + str(args.size * 2) + "x"
+        with PCI(method=constants.PCI_ACCESS_I386_TYPE1) as p:
+            for addr in args.address:
+                dev = p.get_device(0, addr[0], addr[1], addr[2])
+                print(fmt % (format_addr(*addr), unpack(dev.read_block(addr[3], args.size))))
+
+    def write(args):
+        fmtr = "%s : %0" + str(args.size * 2) + "x"
+        fmtw = "%s = %0" + str(args.size * 2) + "x"
+        with PCI(method=constants.PCI_ACCESS_I386_TYPE1) as p:
+            s = format_addr(*args.address)
+            dev = p.get_device(0, args.address[0], args.address[1], args.address[2])
+            print(fmtr % (s, unpack(dev.read_block(args.address[3], args.size))))
+            print(fmtw % (s, args.value))
+            dev.write_block(args.address[3], pack(args.value, args.size))
+            print(fmtr % (s, unpack(dev.read_block(args.address[3], args.size))))
+
+    def rmw(args):
+        f = "%0" + str(args.size * 2) + "x"
+        fmtr = "%s : " + f
+        fmtw = "%s = " + f + " = (" + f + " & " + f + ") | (" + f + " & ~" + f + ")"
+        with PCI(method=constants.PCI_ACCESS_I386_TYPE1) as p:
+            s = format_addr(*args.address)
+            dev = p.get_device(0, args.address[0], args.address[1], args.address[2])
+            prev = unpack(dev.read_block(args.address[3], args.size))
+            print(fmtr % (s, prev))
+            new_val = (prev & args.mask) | (args.update & ~args.mask)
+            print(fmtw % (s, new_val, prev, args.mask, args.update, args.mask))
+            dev.write_block(args.address[3], pack(new_val, args.size))
+            print(fmtr % (s, unpack(dev.read_block(args.address[3], args.size))))
+
+    parser = argparse.ArgumentParser(description="Read and write to PCI devices")
+    subp = parser.add_subparsers()
+
+    reader = subp.add_parser("read", help="Read from PCI spaces")
+    reader.set_defaults(func=read)
+    reader.add_argument("address", type=parse_address, nargs="+",
+                        help="The address(es) from which to read, in format bb:dd:f+offset")
+
+    writer = subp.add_parser("write", help="Write to physical memory")
+    writer.set_defaults(func=write)
+    writer.add_argument("address", type=parse_address,
+                        help="The address to which the write should occur, " + \
+                             "in format bb:dd:f+offset")
+    writer.add_argument("value", type=lambda x: int(x, 16),
+                        help="The value to write")
+
+    rmwp = subp.add_parser("rmw", help="Perform a read-modify-write operation to a PCI device")
+    rmwp.set_defaults(func=rmw)
+    rmwp.add_argument("address", type=parse_address,
+                     help="The address that should be read and modified, in format bb:dd:f+offset")
+    rmwp.add_argument("mask", type=lambda x: int(x, 16),
+                     help="The mask for the bits that should be preserved")
+    rmwp.add_argument("update", type=lambda x: int(x, 16),
+                     help="The new value that should be ORed into the read value")
+    def add_sizes(p):
+        meg = p.add_mutually_exclusive_group()
+        meg.add_argument("--byte", dest="size", action="store_const", const=1,
+                         help="Operate on bytes")
+        meg.add_argument("--word", dest="size", action="store_const", const=2,
+                         help="Operate on words (2 bytes)")
+        meg.add_argument("--long", dest="size", action="store_const", const=4,
+                         help="Operate on longs (4 bytes)")
+        meg.add_argument("--qword", dest="size", action="store_const", const=8,
+                         help="Operate on qwords (8 bytes)")
+        p.set_defaults(size=4)
+
+    add_sizes(reader)
+    add_sizes(writer)
+    add_sizes(rmwp)
+
+    args = parser.parse_args()
+    if "func" not in args:
+        parser.error("must specify a mode")
+    args.func(args)
+
+if __name__ == "__main__":
+    main()
