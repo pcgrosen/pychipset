@@ -257,14 +257,14 @@ class Device:
 
 def main():
     def parse_address(addr):
-        pat = r"([0-9a-fA-F]{1,2}):([0-9a-fA-F]{1,2}):([0-9a-fA-F])\+([0-9a-fA-F]{1,4})"
+        pat = r"([0-9a-fA-F]{1,2}):([0-9a-fA-F]{1,2}).([0-9a-fA-F])\+([0-9a-fA-F]{1,4})"
         res = re.fullmatch(pat, addr)
         if res is None:
             raise ValueError("Couldn't parse %r as a PCI address" % (addr,))
         return tuple(map(lambda x: int(x, 16), res.group(1, 2, 3, 4)))
 
     def format_addr(bus, device, func, offset):
-        return "%02x:%02x:%01x+%04x" % (bus, device, func, offset)
+        return "%02x:%02x.%01x+%04x" % (bus, device, func, offset)
 
     def unpack(thing):
         m = {8: "Q", 4: "I", 2: "H", 1: "B"}
