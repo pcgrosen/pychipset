@@ -12,7 +12,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pcrportmap = chipset.pcr.port_mapper:main",
-            "memory = chipset.memory.memory:main",
+            "memtool = chipset.memory.memory:main",
             "pcitool = chipset.pci.pci:main"
         ]
     }
