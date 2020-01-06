@@ -1,6 +1,7 @@
 import os
 import mmap
 import struct
+from ..pci import PCI, constants as pci_const
 
 
 NUM_PORTS = 256
@@ -25,6 +26,23 @@ class PCR:
     def __exit__(self, ex_t, ex_v, ex_tb):
         self.close()
         return False
+
+    @staticmethod
+    def find_pcr_base():
+        with PCI(method=pci_const.PCI_ACCESS_I386_TYPE1) as pci:
+            dev = pci.get_device(0, 0, 31, 1)
+            dev.caching = False
+            original = dev.read_long(0xe0)
+            try:
+                dev.write_long(0xe0, original & ~0x100)
+                pcr_base = dev.base_addr[0]
+            finally:
+                dev.write_long(0xe0, original)
+        return pcr_base & pci_const.PCI_BASE_ADDRESS_MEM_MASK
+
+    @staticmethod
+    def get_pcr_size():
+        return NUM_PORTS * PORT_SIZE
 
     @staticmethod
     def _translate_address(port, offset):
